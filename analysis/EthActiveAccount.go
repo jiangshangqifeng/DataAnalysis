@@ -4,6 +4,7 @@ import (
 	"fmt"
 	xlsx_v3 "github.com/tealeg/xlsx/v3"
 	"math"
+	"sort"
 )
 
 // ethereum active account analysis
@@ -19,28 +20,12 @@ func (s AnalystEntitys) Len() int           { return len(s) }
 func (s AnalystEntitys) Less(i, j int) bool { return s[i].Weight > s[j].Weight }
 func (s AnalystEntitys) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 
-func GetAnalysisData(fileName, sheetName string) AnalystEntitys {
-	wb, err := xlsx_v3.OpenFile(fileName)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("Sheets in this file:")
-	for i, sh := range wb.Sheets {
-		fmt.Println(i, sh.Name)
-	}
-	fmt.Println("----")
-
-	sh, ok := wb.Sheet[sheetName]
-	if !ok {
-		fmt.Println("Sheet does not exist")
-		return nil
-	}
-	fmt.Println("Max row in", "sheetname", sheetName, "MaxRow", sh.MaxRow)
+func GetAnalysisData(sheet *xlsx_v3.Sheet) AnalystEntitys {
 	var aes AnalystEntitys
 
 	i := 0
 	for {
-		if i >= sh.MaxRow {
+		if i >= sheet.MaxRow {
 			break
 		}
 
@@ -52,13 +37,13 @@ func GetAnalysisData(fileName, sheetName string) AnalystEntitys {
 
 		var row AnalystEntity
 		// get the address
-		addressCell, err := sh.Cell(i, 0)
+		addressCell, err := sheet.Cell(i, 0)
 		if err != nil {
 			panic(err)
 		}
 		row.Address = addressCell.Value
 		// get the count
-		countCell, err := sh.Cell(i, 1)
+		countCell, err := sheet.Cell(i, 1)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -111,4 +96,32 @@ func GetSelfSimilarH(aes AnalystEntitys) float64 {
 	}
 	fmt.Println("min",min,"indexH",indexH)
 	return float64(indexH) / float64(N)
+}
+
+func AnalysisEthereum() {
+	fmt.Println("Starting a test")
+	file := "C:\\code\\go\\src\\github.com\\DataAnalysis\\data\\Ethereum_24h_ActiveAccount1.xlsx"
+	sheet := "ActiveAccounts"
+
+	wb, err := xlsx_v3.OpenFile(file)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("Sheets in this file:")
+	for i, sh := range wb.Sheets {
+		fmt.Println(i, sh.Name)
+	}
+	fmt.Println("----")
+
+	sh, ok := wb.Sheet[sheet]
+	if(!ok) {
+		fmt.Println("sheet name not exist", "sheet",sheet)
+	}
+	aes := GetAnalysisData(sh)
+	sort.Sort(aes)
+	//for i, ae := range aes {
+	//	fmt.Println("row",i, "ae.address", ae.Address, "ae.count",ae.Weight)
+	//}
+	h := GetSelfSimilarH(aes)
+	fmt.Println("h",h)
 }
